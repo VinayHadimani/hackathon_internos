@@ -505,9 +505,8 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
                     <Button
                       onClick={handleDownloadPdf}
                       disabled={pdfExporting}
-                      variant="ghost"
+                      className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/30 font-bold"
                       size="sm"
-                      className="text-blue-400 hover:text-blue-300"
                     >
                       {pdfExporting ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -529,14 +528,14 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
                     <Button
                       onClick={handleDownloadPdf}
                       disabled={pdfExporting}
-                      className="flex-1 bg-white text-black hover:bg-gray-200"
+                      className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold py-6 rounded-xl transition-all"
                     >
                       {pdfExporting ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
                         <Download className="w-4 h-4 mr-2" />
                       )}
-                      Download PDF
+                      Download Tailored Resume (PDF)
                     </Button>
                     <Link href={`/tailor?jobId=${internship.id}&title=${encodeURIComponent(internship.title)}&company=${encodeURIComponent(internship.company)}&description=${encodeURIComponent(internship.description)}`} className="flex-1">
                       <Button variant="outline" className="w-full border-gray-700 text-gray-300">

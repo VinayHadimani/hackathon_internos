@@ -442,14 +442,14 @@ ${job.description || ''}`
                   <Button 
                     onClick={handleDownloadPDF} 
                     disabled={isExporting}
-                    className="bg-white text-black hover:bg-gray-200 font-bold px-6"
+                    className="bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold px-8 py-6 rounded-xl transition-all"
                   >
                     {isExporting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : (
                       <>
                         <Download className="w-4 h-4 mr-2" />
-                        Download PDF
+                        Download Tailored Resume (PDF)
                       </>
                     )}
                   </Button>
