@@ -121,6 +121,7 @@ function TailorContent() {
       
       setResumeText(text);
       localStorage.setItem('resumeText', text);
+      localStorage.setItem('resumeTimestamp', String(Date.now()));
       
       // Background skills extraction (don't block the UI)
       extractSkillsFromResume(text).then(extracted => {

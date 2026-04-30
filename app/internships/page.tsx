@@ -125,6 +125,7 @@ function InternshipsContent() {
       
       setResumeText(text);
       localStorage.setItem('resumeText', text);
+      localStorage.setItem('resumeTimestamp', String(Date.now()));
       setAllJobs([]);
 
       // Extract location hint client-side for display only (no AI needed here)

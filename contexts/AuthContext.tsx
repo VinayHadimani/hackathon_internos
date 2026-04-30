@@ -58,12 +58,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Session expiry: clear old resume data if it exists (e.g. > 2 hours)
+    const timestamp = localStorage.getItem('resumeTimestamp');
+    if (timestamp) {
+      const hours = (Date.now() - parseInt(timestamp)) / (1000 * 60 * 60);
+      if (hours > 2) {
+        console.log('[Auth] Clearing stale session data');
+        const keys = ['resumeText', 'userSkills', 'userHardSkills', 'userSoftSkills', 'userRoles', 'resumeTimestamp'];
+        keys.forEach(k => localStorage.removeItem(k));
+      }
+    }
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
+  const clearUserData = () => {
+    const keys = [
+      'resumeText', 'userSkills', 'userHardSkills', 'userSoftSkills',
+      'userExperience', 'userRoles', 'userLocation', 'userIndustry',
+      'userExperienceLevel', 'userName', 'userEmail', 'userPhone', 'userEducation',
+      'detectedCountry', 'resumeVersion', 'resumeTimestamp', 'lastUserId', 'userCountry'
+    ];
+    keys.forEach(key => localStorage.removeItem(key));
+    sessionStorage.removeItem('selectedJob');
+  };
+
   const signIn = async () => {
+    // Clear any previous session data
+    clearUserData();
     // In "Open" mode, we just set the guest user immediately
     setUser(GUEST_USER);
     window.location.href = '/selection';
@@ -71,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Clear all user data on sign out
+    clearUserData();
     setUser(GUEST_USER);
     window.location.href = '/';
   };

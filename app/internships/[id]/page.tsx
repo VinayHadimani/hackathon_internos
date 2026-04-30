@@ -86,6 +86,7 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
       
       setResumeText(text);
       localStorage.setItem('resumeText', text);
+      localStorage.setItem('resumeTimestamp', String(Date.now()));
       
       // Background skills extraction
       extractSkillsFromResume(text).then(extracted => {
