@@ -55,7 +55,7 @@ function isMatch(userSkill: string, requiredSkill: string): boolean {
 }
 
 export function calculateMatchScore(userSkills: string[], requiredSkills: string[]): number {
-  if (!requiredSkills || requiredSkills.length === 0) return 100;
+  if (!requiredSkills || requiredSkills.length === 0) return 30; // Base score for jobs with no specific skills mentioned
   if (!userSkills || userSkills.length === 0) return 0;
   const matched = requiredSkills.filter(req => userSkills.some(user => isMatch(user, req))).length;
   return Math.round((matched / requiredSkills.length) * 100);

@@ -28,7 +28,7 @@ export async function extractSearchTerms(
           ]
         }
         searchQueries should be 3-5 specific search terms
-        based on their strongest skills and experience.`,
+        based on their strongest skills and experience. Ensure the searchQueries are highly relevant to the candidate's core competencies to ensure accurate job results. Include variations (e.g. "Software Engineer intern", "Software Developer intern").`,
     resumeText,
     {
       model: "llama-3.3-70b-versatile",
@@ -151,16 +151,23 @@ export async function rankJobsForResume(
 // Helper: extract skills from job text
 function extractSkillsFromText(text: string): string[] {
   const commonSkills = [
-    'Python', 'JavaScript', 'TypeScript', 'React', 'Node.js',
-    'SQL', 'MongoDB', 'AWS', 'Docker', 'Git', 'Java', 'C++',
-    'Machine Learning', 'Data Science', 'Django', 'Flask',
-    'Next.js', 'Vue', 'Angular', 'CSS', 'HTML', 'Tailwind',
-    'Figma', 'UI/UX', 'Marketing', 'Excel', 'PowerPoint'
+    // Languages
+    'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C#', 'Ruby', 'PHP', 'Go', 'Rust', 'Swift', 'Kotlin', 'R', 'Dart', 'SQL',
+    // Frontend
+    'React', 'Next.js', 'Vue', 'Angular', 'Svelte', 'HTML', 'CSS', 'Tailwind', 'Bootstrap', 'Sass', 'Less',
+    // Backend & DB
+    'Node.js', 'Express', 'Django', 'Flask', 'FastAPI', 'Spring', 'ASP.NET', 'Laravel', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'GraphQL', 'REST API',
+    // Cloud & DevOps
+    'AWS', 'Docker', 'Kubernetes', 'Git', 'GitHub', 'GitLab', 'CI/CD', 'Linux', 'Terraform', 'Azure', 'GCP',
+    // Domains
+    'Machine Learning', 'Data Science', 'Data Analytics', 'Computer Vision', 'NLP', 'Blockchain', 'Web3', 'Cybersecurity', 'UI/UX', 'Figma', 'Marketing', 'Excel', 'PowerPoint', 'Product Management', 'Project Management', 'Business Analyst'
   ]
 
-  return commonSkills.filter(skill =>
-    text.toLowerCase().includes(skill.toLowerCase())
-  )
+  return commonSkills.filter(skill => {
+    // Use word boundaries to avoid partial matches (e.g., 'Go' matching 'Good')
+    const regex = new RegExp(`\\b${skill.replace(/[.*+?^$\\{}()|[\\]\\\\]/g, '\\\\$&')}\\b`, 'i');
+    return regex.test(text);
+  })
 }
 
 // Helper: get match label from score
