@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Building, MapPin, DollarSign, Clock, Users, ArrowUpRight, Search } from 'lucide-react';
+import { ArrowLeft, Building, MapPin, DollarSign, Clock, Users, ArrowUpRight, Search, Trash2, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function CommunityJobsPage() {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchJobs() {
@@ -29,6 +32,29 @@ export default function CommunityJobsPage() {
 
     fetchJobs();
   }, []);
+  
+  const handleDelete = async (jobId: string) => {
+    if (!confirm('Are you sure you want to remove this job posting? It will be hidden from everyone.')) return;
+    setIsDeleting(jobId);
+    try {
+      const res = await fetch('/api/jobs/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId, userId: user?.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setJobs(prev => prev.filter(j => j.id !== jobId));
+      } else {
+        alert(data.error || 'Failed to delete');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('An error occurred while deleting the job.');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -160,6 +186,21 @@ export default function CommunityJobsPage() {
                   <p className="text-xs text-gray-400 text-center">
                     Posted {new Date(job.created_at).toLocaleDateString()}
                   </p>
+                  
+                  {user?.id && job.user_id === user.id && (
+                    <button
+                      onClick={() => handleDelete(job.id)}
+                      disabled={isDeleting === job.id}
+                      className="w-full mt-2 inline-flex justify-center items-center px-4 py-2 border border-red-200 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {isDeleting === job.id ? (
+                        <Loader2 size={14} className="animate-spin mr-2" />
+                      ) : (
+                        <Trash2 size={14} className="mr-2" />
+                      )}
+                      Remove My Posting
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
