@@ -105,19 +105,18 @@ function InternshipsContent() {
     try {
       let text = '';
 
-      if (file.name.endsWith('.pdf')) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/parse-resume', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) throw new Error('PDF parsing failed');
-        const data = await res.json();
-        text = data.text || '';
-      } else {
-        text = await file.text();
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'File parsing failed');
       }
+      const data = await res.json();
+      text = data.text || '';
 
       if (!text || text.length < 50) {
         setError('Could not read enough text from the file.');
@@ -236,10 +235,10 @@ function InternshipsContent() {
           <label className="inline-flex items-center gap-2 bg-[#3B82F6] hover:bg-[#2563EB] px-6 py-3 rounded-lg cursor-pointer transition text-lg font-medium text-white">
             <Upload className="h-5 w-5" />
             Upload Your Resume
-            <input type="file" accept=".txt,.pdf,.doc,.docx" className="hidden" onChange={handleUpload} />
+            <input type="file" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleUpload} />
           </label>
 
-          <p className="text-[#555] text-sm mt-4">Supports: .txt, .pdf, .doc, .docx</p>
+          <p className="text-[#555] text-sm mt-4">Supports: .txt, .pdf, .jpg, .png</p>
         </main>
       </div>
     );
@@ -311,7 +310,7 @@ function InternshipsContent() {
                 <Upload className="h-4 w-4" />
                 Change Resume
               </span>
-              <input type="file" accept=".txt,.pdf,.doc,.docx" className="hidden" onChange={handleUpload} />
+              <input type="file" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleUpload} />
             </label>
           </div>
         </div>

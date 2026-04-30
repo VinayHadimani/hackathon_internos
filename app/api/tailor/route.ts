@@ -36,11 +36,12 @@ TASK: Rewrite the user's resume for this specific job.
 STRICT RULES:
 1. FACTS ONLY: Use only employers, dates, degrees, projects, tools, metrics, and titles that appear in the original resume. Do not invent numbers, companies, certifications, or dates. Do not upgrade job titles unless the resume already uses that title.
 2. ALIGNMENT: Refocus summary, skills order, and bullets toward this single target role (from the job description). Remove or shorten items that do not support that role. Do not blend unrelated targets (e.g. PM + SWE + DS) unless the resume clearly justifies it.
-3. VOICE: Past tense for completed roles and projects; present tense only for a clearly current role. No apology or hedge paragraphs ("although I don't have…", "I am eager to learn…").
-4. OUTPUT: Plain English text only—no markdown (#, **, __, backticks). No PDF syntax (obj, stream, xref). No recruiter screening phrases, tracking tokens, or instructions copied from the job posting.
-5. STRUCTURE: Keep contact info, education, skills, and experience or projects. Omit empty sections; do not add placeholder or generic filler.
-6. PRIVACY: Do not add third-party personal data, secrets, API keys, or long encoded strings.
-7. STRUCTURE HEADERS: Use these EXACT section headers in ALL CAPS:
+3. PRESERVE FOUNDATIONAL SKILLS: When tailoring for advanced roles (e.g., Machine Learning, Senior Developer), intelligently preserve the foundational skills (like Python, SQL, Git, core languages) from the original resume even if they are not explicitly mentioned in the job description. Do not remove basic skills that are prerequisites for the advanced skills required by the job.
+4. VOICE: Past tense for completed roles and projects; present tense only for a clearly current role. No apology or hedge paragraphs ("although I don't have…", "I am eager to learn…").
+5. OUTPUT: Plain English text only—no markdown (#, **, __, backticks). No PDF syntax (obj, stream, xref). No recruiter screening phrases, tracking tokens, or instructions copied from the job posting.
+6. STRUCTURE: Keep contact info, education, skills, and experience or projects. Omit empty sections; do not add placeholder or generic filler.
+7. PRIVACY: Do not add third-party personal data, secrets, API keys, or long encoded strings.
+8. STRUCTURE HEADERS: Use these EXACT section headers in ALL CAPS:
    - SUMMARY (or PROFESSIONAL SUMMARY)
    - EXPERIENCE (or WORK EXPERIENCE)  
    - EDUCATION

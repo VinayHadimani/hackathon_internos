@@ -18,6 +18,7 @@ interface AICallOptions {
   max_tokens?: number;
   response_format?: { type: 'json_object' | 'text' };
   providerPriority?: ('groq' | 'gemini' | 'openai')[];
+  image?: { base64: string; mimeType: string };
 }
 
 interface AIResponse {
@@ -97,7 +98,10 @@ async function groqCall(apiKey: string, system: string, user: string, options: A
     model: options.model || 'llama-3.3-70b-versatile',
     messages: [
       { role: 'system', content: system },
-      { role: 'user', content: user }
+      { role: 'user', content: options.image ? [
+          { type: 'text', text: user },
+          { type: 'image_url', image_url: { url: `data:${options.image.mimeType};base64,${options.image.base64}` } }
+      ] : user as any }
     ],
     temperature: options.temperature ?? 0.2,
     max_tokens: options.max_tokens || 2500,
@@ -121,7 +125,15 @@ async function geminiCall(apiKey: string, system: string, user: string, options:
       body: JSON.stringify({
         contents: [{
           role: 'user',
-          parts: [{ text: `${system}\n\nUSER INPUT:\n${user}` }]
+          parts: [
+            { text: `${system}\n\nUSER INPUT:\n${user}` },
+            ...(options.image ? [{
+              inlineData: {
+                data: options.image.base64,
+                mimeType: options.image.mimeType
+              }
+            }] : [])
+          ]
         }],
         generationConfig: { 
           temperature: options.temperature ?? 0.2, 
@@ -155,7 +167,10 @@ async function openaiCall(apiKey: string, system: string, user: string, options:
     model: options.model || 'gpt-4o-mini',
     messages: [
       { role: 'system', content: system },
-      { role: 'user', content: user }
+      { role: 'user', content: options.image ? [
+          { type: 'text', text: user },
+          { type: 'image_url', image_url: { url: `data:${options.image.mimeType};base64,${options.image.base64}` } }
+      ] : user as any }
     ],
     temperature: options.temperature ?? 0.2,
     max_tokens: options.max_tokens || 2500,
@@ -174,7 +189,11 @@ export async function callAI(
   userMessage: string,
   options: AICallOptions = {}
 ): Promise<AIResponse> {
-  const providerOrder = options.providerPriority || ['groq', 'gemini', 'openai'];
+  // If an image is provided, Groq's default model might not support vision. Prioritize Gemini and OpenAI.
+  const defaultProviderOrder: ('groq' | 'gemini' | 'openai')[] = options.image 
+    ? ['gemini', 'openai'] 
+    : ['groq', 'gemini', 'openai'];
+  const providerOrder = options.providerPriority || defaultProviderOrder;
   
   const providers = {
     groq: { keys: () => getKeys('GROQ_API_KEYS'), call: groqCall },

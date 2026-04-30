@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Upload, Briefcase, FileText, ArrowRight, Loader2, Zap, User } from 'lucide-react';
-import { parseResumePDF, parseResumeText } from '@/lib/resume-parser';
+import { parseResumePDF, parseResumeText, parseResumeImage } from '@/lib/resume-parser';
 import { extractSkillsFromResume } from '@/lib/ai';
 
 export default function DashboardPage() {
@@ -56,6 +56,18 @@ export default function DashboardPage() {
       if (file.type === 'application/pdf') {
         const buffer = await file.arrayBuffer();
         text = await parseResumePDF(buffer);
+      } else if (file.type.startsWith('image/')) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            let encoded = reader.result?.toString() || '';
+            if (encoded.includes(',')) encoded = encoded.split(',')[1];
+            resolve(encoded);
+          };
+          reader.onerror = error => reject(error);
+        });
+        text = await parseResumeImage(base64, file.type);
       } else {
         const rawText = await file.text();
         text = await parseResumeText(rawText);
@@ -178,7 +190,7 @@ export default function DashboardPage() {
                   </span>
                   <input
                     type="file"
-                    accept=".txt,.pdf,.doc,.docx"
+                    accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                     className="hidden"
                     onChange={handleUpload}
                   />
@@ -212,7 +224,7 @@ export default function DashboardPage() {
                 )}
                 <input
                   type="file"
-                  accept=".txt,.pdf,.doc,.docx"
+                  accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                   className="hidden"
                   onChange={handleUpload}
                   disabled={uploading}

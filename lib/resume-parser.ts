@@ -45,7 +45,22 @@ export async function parseResumePDF(buffer: ArrayBuffer): Promise<string> {
     const { text } = await extractText(pdf);
     
     // Join pages and sanitize
-    const rawText = text.join('\n');
+    let rawText = text.join('\n').trim();
+    
+    if (!rawText) {
+      console.log('[Resume Parser] No text extracted via unpdf. Attempting AI extraction for image-based PDF...');
+      const base64 = Buffer.from(buffer).toString('base64');
+      const aiResponse = await callAI(
+        "Extract all the text from this resume document. Output ONLY the raw text exactly as it appears, preserving the logical order of sections. Do not add any conversational text or markdown formatting.",
+        "Please extract the text.",
+        {
+          image: { base64, mimeType: 'application/pdf' }
+        }
+      );
+      if (aiResponse.success && aiResponse.content) {
+        rawText = aiResponse.content.trim();
+      }
+    }
     
     // Clean template instructions and artifacts (Fix #2, #4)
     let cleanText = rawText
@@ -103,6 +118,27 @@ export async function parseResumeText(text: string): Promise<string> {
   
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   return cleaned;
+}
+
+export async function parseResumeImage(base64: string, mimeType: string): Promise<string> {
+  console.log('[Resume Parser] Extracting text from image via AI...');
+  const aiResponse = await callAI(
+    "Extract all the text from this resume image. Output ONLY the raw text exactly as it appears, preserving the logical order of sections (e.g. Summary, Experience, Education, Skills). Do not add any conversational text or markdown formatting.",
+    "Please extract the text from this resume.",
+    {
+      image: { base64, mimeType }
+    }
+  );
+  if (aiResponse.success && aiResponse.content) {
+    let cleaned = aiResponse.content.trim();
+    
+    // Clean up typical hallucinations if present
+    cleaned = cleaned.replace(/^```[a-z]*\n/gi, '').replace(/\n```$/g, '').trim();
+    
+    return cleaned;
+  } else {
+    throw new Error(aiResponse.error || "Failed to extract text from image");
+  }
 }
 
 export async function parseStudentProfile(resumeText: string): Promise<StudentProfile> {
