@@ -41,7 +41,9 @@ export interface StudentProfile {
 export async function parseResumePDF(buffer: ArrayBuffer): Promise<string> {
   try {
     const uint8Array = new Uint8Array(buffer);
-    const pdf = await getDocumentProxy(uint8Array);
+    const pdf = await getDocumentProxy(uint8Array, {
+      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/',
+    });
     const { text } = await extractText(pdf);
     
     // Join pages and sanitize
