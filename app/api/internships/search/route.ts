@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { aggregateJobs, type JobResult } from '@/lib/aggregator';
 import { callAI } from '@/lib/rotating-ai';
+import { getActiveCommunityJobs, searchCommunityJobs } from '@/lib/supabase/community-jobs';
 
 // ══════════════════════════════════════════════════════
 // AI-POWERED RESUME -> JOB MATCHING PIPELINE
@@ -307,14 +308,22 @@ export async function POST(req: NextRequest) {
       : (Array.isArray(clientSkills) && clientSkills.length > 0 && clientSkills[0])
         ? String(clientSkills[0])
         : query;
+
     // We can't pass industry/country to the initial batch yet because AI hasn't finished.
     // However, we can guess the country from the userLocation string if provided.
     const guessCountry = userLocation.toLowerCase().includes('india') ? 'in' : 
                          userLocation.toLowerCase().includes('australia') ? 'au' : 
                          userLocation.toLowerCase().includes('usa') ? 'us' : undefined;
-    const initialJobsPromise = aggregateJobs(initialQuery, userLocation, undefined, guessCountry);
 
-    const [aiProfileResult, initialJobs] = await Promise.all([aiPromise, initialJobsPromise]);
+    const initialJobsPromise = aggregateJobs(initialQuery, userLocation, undefined, guessCountry);
+    // Initial community fetch (general)
+    const communityJobsPromise = getActiveCommunityJobs();
+
+    const [aiProfileResult, initialJobs, initialCommunityJobs] = await Promise.all([
+      aiPromise, 
+      initialJobsPromise,
+      communityJobsPromise
+    ]);
     let profile: ResumeProfile | null = aiProfileResult;
 
     if (!profile) {
@@ -384,12 +393,42 @@ export async function POST(req: NextRequest) {
     const additionalPromises = uniqueQueries
       .filter(q => q.toLowerCase() !== initialQuery.toLowerCase())
       .map(q => aggregateJobs(q, userLocation, profile!.industry, profile!.country_code));
+    
+    // Also search community database for EACH keyword
+    const communitySearchPromises = uniqueQueries.map(q => searchCommunityJobs(q, userLocation));
 
-    console.log(`[Search] Fetching ${additionalPromises.length} additional query batches...`);
-    const additionalResults = await Promise.all(additionalPromises);
+    console.log(`[Search] Fetching ${additionalPromises.length} additional query batches and searching community DB...`);
+    const [additionalResults, communitySearchResults] = await Promise.all([
+      Promise.all(additionalPromises),
+      Promise.all(communitySearchPromises)
+    ]);
 
     // STEP 4: Combine, deduplicate, score, filter
     const allJobsMap = new Map<string, JobResult>();
+
+    // Helper to merge community jobs
+    const mergeCommunityJobs = (cJobs: any[]) => {
+      for (const cJob of cJobs) {
+        const job: JobResult = {
+          title: cJob.title,
+          company: cJob.company,
+          location: cJob.location,
+          salary: cJob.salary || '',
+          salaryObj: null,
+          url: cJob.apply_link || `mailto:${cJob.contact_email}`,
+          source: 'Community',
+          type: cJob.job_type,
+          description: cJob.description,
+          postedAt: cJob.created_at
+        };
+        const key = `${job.title}-${job.company}`.toLowerCase().replace(/\s+/g, '');
+        if (!allJobsMap.has(key)) allJobsMap.set(key, job);
+      }
+    };
+
+    // Merge all community results (initial + keyword-based)
+    mergeCommunityJobs(initialCommunityJobs);
+    communitySearchResults.forEach(batch => mergeCommunityJobs(batch));
 
     for (const job of initialJobs) {
       const key = `${job.title}-${job.company}`.toLowerCase().replace(/\s+/g, '');
