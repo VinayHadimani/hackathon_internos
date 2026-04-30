@@ -7,10 +7,10 @@ import {
   FileEdit, Search, LayoutGrid, Upload, ClipboardPaste, Sparkles,
   ChevronDown, Menu, X, Check, ArrowRight, Zap
 } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
-import LoginModal from '@/components/auth/LoginModal'
-import BetaSpots from '@/components/BetaSpots'
-import { BETA_CONFIG } from '@/constants/beta'
+import { useAuth } from "@/hooks/useAuth"
+import LoginModal from "@/components/auth/LoginModal"
+import BetaSpots from "@/components/BetaSpots"
+import { BETA_CONFIG } from "@/constants/beta"
 
 // ─── Animation Variants ────────────────────────────────────────
 const fadeUp: Variants = {
