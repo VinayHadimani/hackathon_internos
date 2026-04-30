@@ -20,6 +20,7 @@ interface ResumeProfile {
   country_code: string; // ISO 3166-1 alpha-2 (e.g., 'in', 'us', 'au')
   experience_level: string;
   search_keywords: string[];
+  demographics: string[]; // e.g., ["female", "student", "veteran"]
 }
 
 /**
@@ -47,7 +48,7 @@ async function aiExtractProfile(resumeText: string): Promise<ResumeProfile | nul
       return null;
     }
 
-    const prompt = `You are a career analysis engine. Your ONLY job is to read a resume and determine what jobs this person should search for.
+    const prompt = `You are an elite, highly accurate career analysis engine. Your ONLY job is to read a resume and determine what jobs this person should search for with maximum precision.
 
 You will see a resume. It could be from ANY field — retail, healthcare, engineering, arts, finance, sports, hospitality, law, education, science, trades, government, non-profit, or anything else. Do NOT assume any default industry.
 
@@ -60,7 +61,8 @@ Analyze the resume and return JSON with EXACTLY these fields:
   "industry": "primary industry from their actual work experience",
   "country_code": "2-letter ISO country code (e.g. 'in', 'us', 'au', 'gb', 'ca') detected from address or phone",
   "experience_level": "fresher or junior or mid or senior",
-  "search_keywords": ["list of 6-8 search phrases to type into a job board"]
+  "search_keywords": ["list of 6-8 highly accurate search phrases to type into a job board"],
+  "demographics": ["any demographic, diversity, or identity keywords. e.g. 'female', 'student', 'veteran'. Infer from name, pronouns, or organizations."]
 }
 
 RULES FOR EACH FIELD:
@@ -81,6 +83,8 @@ RULES FOR EACH FIELD:
 
 8. NO-HARD-SKILL HANDLING: If the person is a student with no technical skills, do NOT leave hard_skills empty. Put whatever specific abilities they mention — "cash handling", "operating cash register", "serving customers", "basic math", "food preparation", "event coordination" are all valid hard skills for an entry-level worker.
 
+9. DEMOGRAPHICS: Infer demographic information. Look at the name to determine gender (e.g. 'female', 'male'). Look at education to see if they are a 'student' or 'recent graduate'. Look at clubs to find diversity programs. These can be used to find targeted opportunities like 'women in tech' or 'student internships'.
+
 Return ONLY valid JSON. No explanation.`;
 
     const response = await callAI(
@@ -89,7 +93,7 @@ Return ONLY valid JSON. No explanation.`;
       {
         model: 'llama-3.3-70b-versatile',
         temperature: 0.1,
-        max_tokens: 800,
+        max_tokens: 1000,
         providerPriority: ['groq', 'gemini', 'openai']
       }
     );
@@ -106,10 +110,15 @@ Return ONLY valid JSON. No explanation.`;
 
     if (!parsed.hard_skills || !Array.isArray(parsed.hard_skills)) return null;
     if (!parsed.search_keywords || !Array.isArray(parsed.search_keywords)) return null;
+    
+    // Ensure demographics is an array
+    if (!parsed.demographics || !Array.isArray(parsed.demographics)) {
+      parsed.demographics = [];
+    }
 
     console.log(`[Search] AI SUCCESS — Industry: ${parsed.industry}`);
+    console.log(`[Search] Demographics: ${(parsed.demographics||[]).join(', ')}`);
     console.log(`[Search] Hard Skills: ${(parsed.hard_skills||[]).slice(0,8).join(', ')}`);
-    console.log(`[Search] Soft Skills: ${(parsed.soft_skills||[]).join(', ')}`);
     console.log(`[Search] Roles: ${(parsed.roles||[]).join(', ')}`);
     console.log(`[Search] Keywords: ${(parsed.search_keywords||[]).join(', ')}`);
 
@@ -162,6 +171,7 @@ function fallbackExtractProfile(
     country_code: 'in', // Default fallback
     experience_level: 'student',
     search_keywords: [...new Set(searchKeywords)].slice(0, 5),
+    demographics: [],
   };
 }
 
@@ -323,6 +333,26 @@ export async function POST(req: NextRequest) {
     // STEP 2: Build targeted queries from AI profile
     const searchQueries: string[] = [];
 
+    // Inject Demographic/Diversity targeted queries first to ensure they get scraped
+    if (profile.demographics && profile.demographics.length > 0) {
+      const demoStr = profile.demographics.join(' ').toLowerCase();
+      if (demoStr.includes('female') || demoStr.includes('woman') || demoStr.includes('women')) {
+        const isTech = (profile.industry || '').toLowerCase().includes('tech') || 
+                      (profile.roles || []).some(r => r.toLowerCase().includes('engineer') || r.toLowerCase().includes('developer'));
+        if (isTech) {
+          searchQueries.push('women in tech internship');
+        } else {
+          searchQueries.push('women internship');
+        }
+      }
+      if (demoStr.includes('student') || demoStr.includes('undergraduate')) {
+        searchQueries.push('student internship');
+      }
+      if (demoStr.includes('veteran')) {
+        searchQueries.push('veteran internship');
+      }
+    }
+
     if (profile.search_keywords && profile.search_keywords.length > 0) {
       searchQueries.push(...profile.search_keywords.slice(0, 4));
     }
@@ -335,8 +365,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // CRITICAL: Limit to 4 queries to increase volume while keeping latency reasonable
-    let uniqueQueries = [...new Set(searchQueries)].slice(0, 4);
+    // Limit to 6 queries to increase targeted volume while keeping latency reasonable
+    let uniqueQueries = [...new Set(searchQueries)].slice(0, 6);
 
     const hasInternshipQuery = uniqueQueries.some(q =>
       /internship|job|role|assistant|position|associate/.test(q.toLowerCase())
