@@ -173,14 +173,85 @@ ${job.description || ''}`
     }
   };
 
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualCompany, setManualCompany] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+
   if (!job) {
     return (
-      <div className="container py-8 bg-[#050505] min-h-screen text-white flex flex-col items-center">
-        <Alert className="max-w-md bg-gray-900 border-gray-800">
-          <AlertDescription className="text-gray-400">
-            No job selected. <Link href="/internships" className="underline text-blue-400 font-bold">Browse jobs</Link> to find one to tailor for.
-          </AlertDescription>
-        </Alert>
+      <div className="container py-8 max-w-4xl mx-auto min-h-screen text-white">
+        <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 mb-6 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to dashboard
+        </Link>
+
+        <h1 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
+          <FileText className="text-blue-400" />
+          Paste Job Description
+        </h1>
+        
+        {!resumeText && (
+          <Alert className="mb-6 border-yellow-600/30 bg-yellow-900/10 text-yellow-500 rounded-xl">
+            <AlertDescription className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+              No resume profile found. Please upload your resume in the <Link href="/dashboard" className="underline font-bold">dashboard</Link> first.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card className="border-gray-800 bg-[#0D0D0D]">
+          <CardContent className="pt-6 flex flex-col gap-4">
+            <p className="text-gray-400 text-sm mb-2">Paste the details of the internship or job you want to apply for, and our AI will tailor your resume to match it.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Job Title <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  value={manualTitle}
+                  onChange={e => setManualTitle(e.target.value)}
+                  placeholder="e.g. Frontend Engineering Intern"
+                  className="w-full bg-black/50 border border-gray-800 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Company <span className="text-gray-600">(Optional)</span></label>
+                <input 
+                  type="text" 
+                  value={manualCompany}
+                  onChange={e => setManualCompany(e.target.value)}
+                  placeholder="e.g. Google"
+                  className="w-full bg-black/50 border border-gray-800 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Job Description <span className="text-red-500">*</span></label>
+              <textarea 
+                value={manualDescription}
+                onChange={e => setManualDescription(e.target.value)}
+                placeholder="Paste the full job description here..."
+                className="w-full bg-black/50 border border-gray-800 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition-colors resize-y min-h-[200px]"
+              />
+            </div>
+
+            <Button 
+              disabled={!manualTitle || !manualDescription || !resumeText}
+              onClick={() => {
+                setJob({
+                  id: 'manual',
+                  title: manualTitle,
+                  company: manualCompany || 'Unknown Company',
+                  description: manualDescription
+                });
+              }}
+              className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg transition-all active:scale-[0.98]"
+            >
+              Set Target Job & Tailor Resume
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
