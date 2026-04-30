@@ -111,18 +111,17 @@ export default function PostJobPage() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen bg-[#030303] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#0D0D0D] rounded-2xl shadow-2xl border border-white/10 p-8 text-center">
+          <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Job Posted Successfully!</h2>
-          <p className="text-gray-600 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-2">Job Posted Successfully!</h2>
+          <p className="text-gray-400 mb-8">
             Your job has been published to the community board and will be visible to students for the next 30 days.
           </p>
-          <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 text-blue-400">
             <Loader2 className="animate-spin" size={16} />
-            Redirecting to job board...
             <span className="text-sm font-medium">Redirecting to board...</span>
           </div>
         </div>
