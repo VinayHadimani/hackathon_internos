@@ -54,6 +54,7 @@ function TailorContent() {
   const [relevanceReason, setRelevanceReason] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     const jobId = searchParams.get('jobId');
@@ -83,6 +84,11 @@ function TailorContent() {
     if (resume) {
       setResumeText(resume);
     }
+
+    // Fetch profile for PDF headers
+    fetch('/api/profile').then(res => res.json()).then(data => {
+      if (!data.error) setProfile(data);
+    }).catch(console.error);
   }, [searchParams]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -210,6 +216,10 @@ ${job.description || ''}`
           tailoredResume,
           jobTitle: job?.title,
           skills: Array.isArray(skills) ? skills : [],
+          name: profile?.fullName,
+          email: profile?.email,
+          phone: profile?.phone,
+          location: profile?.location || profile?.collegeName,
         }),
       });
 

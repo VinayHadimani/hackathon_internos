@@ -37,6 +37,7 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
   const [pdfExporting, setPdfExporting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     const savedResume = localStorage.getItem('resumeText');
@@ -46,8 +47,13 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
     if (isAuthenticated && user && lastUserId && lastUserId !== user.id) {
        setResumeText(null);
     } else if (savedResume) {
-       setResumeText(savedResume);
+      setResumeText(savedResume);
     }
+
+    // Fetch profile for PDF headers
+    fetch('/api/profile').then(res => res.json()).then(data => {
+      if (!data.error) setProfile(data);
+    }).catch(console.error);
   }, [isAuthenticated, user]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -147,13 +153,17 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
       } catch {
         skills = [];
       }
-      const res = await fetch('/api/resume/pdf', {
+      const res = await fetch('/api/download-resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tailoredResume: tailoredResume,
           jobTitle: internship.title,
           skills: Array.isArray(skills) ? skills : [],
+          name: profile?.fullName,
+          email: profile?.email,
+          phone: profile?.phone,
+          location: profile?.location || profile?.collegeName,
         }),
       });
       if (!res.ok) {
