@@ -270,6 +270,11 @@ function scoreJob(job: any, profile: ResumeProfile): number {
     score -= 15;
   }
 
+  // 🏪 Community Boost: Direct postings on InternOS are high-value
+  if (job.source === 'Community') {
+    score += 25;
+  }
+
   return Math.max(0, Math.min(Math.round(score), 100));
 }
 
@@ -457,7 +462,9 @@ export async function POST(req: NextRequest) {
     // Filter: minimum relevance + location preference
     const goodMatches = sorted.filter(job => {
       // 🚩 RELAXED: Minimum relevance threshold
-      if (job.matchScore < 10) return false;
+      // Community jobs get a much lower threshold to ensure they appear
+      const minScore = job.source === 'Community' ? 5 : 10;
+      if (job.matchScore < minScore) return false;
       const jobLoc = (job.location || '').toLowerCase();
       const userLoc = (userLocation || '').toLowerCase();
       

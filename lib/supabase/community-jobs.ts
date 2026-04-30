@@ -85,9 +85,9 @@ export async function searchCommunityJobs(query: string, location?: string): Pro
     dbQuery = dbQuery.or(`title.ilike.%${query}%,company.ilike.%${query}%,description.ilike.%${query}%`)
   }
 
-  if (location) {
-    dbQuery = dbQuery.ilike('location', `%${location}%`)
-  }
+  // We skip strict location filtering in the database query to ensure 
+  // community jobs aren't hidden by broad location terms (like "India").
+  // The search pipeline's scoring logic will handle proximity ranking.
 
   const { data, error } = await dbQuery
     .order('created_at', { ascending: false })
