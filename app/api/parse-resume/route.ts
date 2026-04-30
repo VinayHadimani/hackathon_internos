@@ -40,10 +40,7 @@ export async function POST(request: NextRequest) {
     const uint8Array = new Uint8Array(arrayBuffer);
 
     console.log('[Parse Resume] Parsing PDF with unpdf...');
-    const { totalPages, text } = await extractText(uint8Array, { 
-      mergePages: true,
-      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/',
-    });
+    const { totalPages, text } = await extractText(uint8Array, { mergePages: true });
 
     console.log('[Parse Resume] Pages:', totalPages);
 
