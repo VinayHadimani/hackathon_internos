@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, MapPin, DollarSign, Calendar, Target, ExternalLink, FileEdit, Zap, Loader2, Check, Download, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Calendar, Target, ExternalLink, FileEdit, Zap, Loader2, Check, Download, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { parseResumePDF, parseResumeText, parseResumeImage } from '@/lib/resume-parser';
+import { extractSkillsFromResume } from '@/lib/ai';
 
 interface InternshipDetail {
   id: string;
@@ -33,6 +35,8 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
   const [tailoredResume, setTailoredResume] = useState<string | null>(null);
   const [tailoringMatchScore, setTailoringMatchScore] = useState<number>(0);
   const [pdfExporting, setPdfExporting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     const savedResume = localStorage.getItem('resumeText');
@@ -45,6 +49,57 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
        setResumeText(savedResume);
     }
   }, [isAuthenticated, user]);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+    setError(null);
+
+    try {
+      let text = '';
+      if (file.type === 'application/pdf') {
+        const buffer = await file.arrayBuffer();
+        text = await parseResumePDF(buffer);
+      } else if (file.type.startsWith('image/')) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            let encoded = reader.result?.toString() || '';
+            if (encoded.includes(',')) encoded = encoded.split(',')[1];
+            resolve(encoded);
+          };
+          reader.onerror = error => reject(error);
+        });
+        text = await parseResumeImage(base64, file.type);
+      } else {
+        const rawText = await file.text();
+        text = await parseResumeText(rawText);
+      }
+      
+      if (!text || text.length < 50) {
+        throw new Error('Could not extract enough text from the resume.');
+      }
+      
+      setResumeText(text);
+      localStorage.setItem('resumeText', text);
+      
+      // Background skills extraction
+      extractSkillsFromResume(text).then(extracted => {
+        localStorage.setItem('userSkills', JSON.stringify(extracted.skills || []));
+        localStorage.setItem('userHardSkills', JSON.stringify(extracted.hard_skills || []));
+      }).catch(console.error);
+
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      setUploadError(err.message || 'Failed to process resume.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   async function handleTailorResume() {
     if (!resumeText || !internship) return;
@@ -347,14 +402,29 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
             {isAuthenticated ? (
               <Button
                 onClick={() => {
-                  // Scroll to tailoring section or toggle it
-                  const section = document.getElementById('tailoring-section');
-                  section?.scrollIntoView({ behavior: 'smooth' });
+                  if (resumeText) {
+                    handleTailorResume();
+                    const section = document.getElementById('tailoring-section');
+                    section?.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    const section = document.getElementById('upload-section');
+                    section?.scrollIntoView({ behavior: 'smooth' });
+                  }
                 }}
+                disabled={isTailoring}
                 className="bg-[#3B82F6] text-white font-medium py-6 rounded-xl hover:bg-[#2563EB] transition-colors flex items-center justify-center gap-2"
               >
-                <Sparkles size={20} />
-                Tailor Resume Inline
+                {isTailoring ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Building Resume...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    Build My Tailored Resume
+                  </>
+                )}
               </Button>
             ) : (
               <Link
@@ -386,10 +456,20 @@ export default function InternshipDetailPage({ params }: { params: Promise<{ id:
               </div>
 
               {!resumeText && (
-                <div className="bg-yellow-900/20 border border-yellow-600/30 text-yellow-500 p-4 rounded-xl mb-6">
-                  <p className="text-sm">
-                    No resume found in your profile. Please <Link href="/dashboard" className="underline font-bold">upload your resume</Link> first.
-                  </p>
+                <div id="upload-section" className="bg-[#111] border border-dashed border-blue-500/30 p-8 rounded-2xl mb-6 text-center">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                    {isUploading ? <Loader2 className="w-8 h-8 text-blue-500 animate-spin" /> : <Upload className="w-8 h-8 text-blue-500" />}
+                  </div>
+                  <h4 className="text-white font-bold mb-2">Upload your resume first</h4>
+                  <p className="text-gray-400 text-sm mb-6">We need your current resume to tailor it for this role.</p>
+                  
+                  <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium text-white">
+                    <Upload className="h-4 w-4" />
+                    Select File
+                    <input type="file" className="hidden" onChange={handleUpload} accept=".pdf,.txt,.docx" disabled={isUploading} />
+                  </label>
+                  
+                  {uploadError && <p className="mt-4 text-red-400 text-sm">{uploadError}</p>}
                 </div>
               )}
 

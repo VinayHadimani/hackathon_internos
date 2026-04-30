@@ -179,14 +179,10 @@ function InternshipsContent() {
         if (data.profile?.experience_level) localStorage.setItem('userExperienceLevel', data.profile.experience_level);
         if (data.detected_country) localStorage.setItem('userCountry', data.detected_country);
 
-        // Clean up raw resume text after results are displayed
+        // Server-extracted data is saved, we keep the resume text for tailoring
         if (!hasCleanedUpRef.current) {
           hasCleanedUpRef.current = true;
           fetch('/api/resume/cleanup', { method: 'DELETE' }).catch(err => console.error('[Internships] Database cleanup failed:', err));
-          setTimeout(() => {
-            localStorage.removeItem('resumeText');
-            console.log('[Internships] Resume text cleaned up after display');
-          }, 2000);
         }
       } else {
         setError(data.error || 'Failed to search jobs');
