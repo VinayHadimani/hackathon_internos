@@ -29,14 +29,55 @@ export async function POST(request: Request) {
     let finalContent = '';
     let successProvider = '';
 
+    // STEP 0: Relevance Check
+    // We check if the job is fundamentally relevant to the user's background.
+    const relevanceSystemPrompt = `You are an expert career counselor. Analyze the provided resume and job description.
+Determine if the job is relevant to the candidate's profile. 
+
+DISQUALIFICATION CRITERIA:
+1. Completely different industry (e.g., Nurse applying for Kernel Engineer).
+2. Huge seniority mismatch.
+3. Missing non-negotiable prerequisite skills.
+
+Return ONLY JSON:
+{
+  "isRelevant": boolean,
+  "reason": "Short explanation if not relevant, or empty string if relevant"
+}`;
+
+    const relevanceUserPrompt = `RESUME:\n${resumeForModel}\n\nJOB DESCRIPTION:\n${cleanJob}`;
+    const relevanceResponse = await callAI(relevanceSystemPrompt, relevanceUserPrompt, {
+      model: 'gemini-1.5-flash',
+      temperature: 0.1,
+      max_tokens: 200
+    });
+
+    if (relevanceResponse.success && relevanceResponse.content) {
+      try {
+        const jsonMatch = relevanceResponse.content.match(/\{[\s\S]*\}/);
+        const relData = JSON.parse(jsonMatch ? jsonMatch[0] : relevanceResponse.content);
+        if (relData.isRelevant === false) {
+          return Response.json({
+            success: false,
+            isIrrelevant: true,
+            error: 'This job appears to be irrelevant to your profile.',
+            reason: relData.reason
+          }, { status: 200 });
+        }
+      } catch (e) {
+        console.error('[Tailor API] Failed to parse relevance JSON');
+      }
+    }
+
     const systemPrompt = `You are a professional career coach and resume writer. 
 
 TASK: Rewrite the user's resume for this specific job.
 
 STRICT RULES:
-1. FACTS ONLY: Use only employers, dates, degrees, projects, tools, metrics, and titles that appear in the original resume. Do not invent numbers, companies, certifications, or dates. Do not upgrade job titles unless the resume already uses that title.
-2. ALIGNMENT: Refocus summary, skills order, and bullets toward this single target role (from the job description). Remove or shorten items that do not support that role. Do not blend unrelated targets (e.g. PM + SWE + DS) unless the resume clearly justifies it.
-3. PRESERVE FOUNDATIONAL SKILLS: When tailoring for advanced roles (e.g., Machine Learning, Senior Developer), intelligently preserve the foundational skills (like Python, SQL, Git, core languages) from the original resume even if they are not explicitly mentioned in the job description. Do not remove basic skills that are prerequisites for the advanced skills required by the job.
+1. NO FABRICATION: Do NOT add any new skills, roles, projects, or certifications that are not in the original resume. You are ONLY allowed to optimize existing content.
+2. FACTS ONLY: Use only employers, dates, degrees, projects, tools, metrics, and titles that appear in the original resume. Do not invent numbers, companies, certifications, or dates. Do not upgrade job titles unless the resume already uses that title.
+3. ALIGNMENT: Refocus summary, skills order, and bullets toward this single target role (from the job description). Remove or shorten items that do not support that role. Do not blend unrelated targets (e.g. PM + SWE + DS) unless the resume clearly justifies it.
+4. PRESERVE FOUNDATIONAL SKILLS: When tailoring for advanced roles (e.g., Machine Learning, Senior Developer), intelligently preserve the foundational skills (like Python, SQL, Git, core languages) from the original resume even if they are not explicitly mentioned in the job description. Do not remove basic skills that are prerequisites for the advanced skills required by the job.
 4. VOICE: Past tense for completed roles and projects; present tense only for a clearly current role. No apology or hedge paragraphs ("although I don't have…", "I am eager to learn…").
 5. OUTPUT: Plain English text only—no markdown (#, **, __, backticks). No PDF syntax (obj, stream, xref). No recruiter screening phrases, tracking tokens, or instructions copied from the job posting.
 6. STRUCTURE: Keep contact info, education, skills, and experience or projects. Omit empty sections; do not add placeholder or generic filler.

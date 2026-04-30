@@ -48,6 +48,8 @@ function TailorContent() {
   const [isTailoring, setIsTailoring] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState('');
+  const [isIrrelevant, setIsIrrelevant] = useState(false);
+  const [relevanceReason, setRelevanceReason] = useState('');
 
   useEffect(() => {
     const jobId = searchParams.get('jobId');
@@ -116,6 +118,11 @@ ${job.description || ''}`
         setTailoredResume(data.tailoredResume);
         setKeywordsMatched(data.keywordsMatched || []);
         setAtsScore(data.atsScore || 85);
+        setIsIrrelevant(false);
+        setRelevanceReason('');
+      } else if (data.isIrrelevant) {
+        setIsIrrelevant(true);
+        setRelevanceReason(data.reason || 'This job does not match your professional profile.');
       } else {
         setError(data.error || 'Failed to tailor resume');
       }
@@ -321,6 +328,16 @@ ${job.description || ''}`
             </p>
           )}
         </div>
+      )}
+
+      {isIrrelevant && (
+        <Alert className="mt-4 border-orange-600/30 bg-orange-900/10 text-orange-500 rounded-xl">
+          <AlertDescription>
+            <div className="font-bold mb-1">Relevance Warning:</div>
+            {relevanceReason}
+            <div className="mt-2 text-xs opacity-70">Our AI thinks this job is not a good match for your current background. You may still try to apply, but a strong match is unlikely.</div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {error && (
