@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Download, ArrowLeft, Sparkles, Target, FileText, Check } from 'lucide-react';
+import { Loader2, Download, ArrowLeft, Sparkles, Target, FileText, Check, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { parseResumePDF, parseResumeText, parseResumeImage } from '@/lib/resume-parser';
+import { extractSkillsFromResume } from '@/lib/ai';
 
 /**
  * Component to highlight keywords in the resume text
@@ -50,6 +52,8 @@ function TailorContent() {
   const [error, setError] = useState('');
   const [isIrrelevant, setIsIrrelevant] = useState(false);
   const [relevanceReason, setRelevanceReason] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     const jobId = searchParams.get('jobId');
@@ -80,6 +84,57 @@ function TailorContent() {
       setResumeText(resume);
     }
   }, [searchParams]);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+    setError('');
+
+    try {
+      let text = '';
+      if (file.type === 'application/pdf') {
+        const buffer = await file.arrayBuffer();
+        text = await parseResumePDF(buffer);
+      } else if (file.type.startsWith('image/')) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            let encoded = reader.result?.toString() || '';
+            if (encoded.includes(',')) encoded = encoded.split(',')[1];
+            resolve(encoded);
+          };
+          reader.onerror = error => reject(error);
+        });
+        text = await parseResumeImage(base64, file.type);
+      } else {
+        const rawText = await file.text();
+        text = await parseResumeText(rawText);
+      }
+      
+      if (!text || text.length < 50) {
+        throw new Error('Could not extract enough text from the resume.');
+      }
+      
+      setResumeText(text);
+      localStorage.setItem('resumeText', text);
+      
+      // Background skills extraction (don't block the UI)
+      extractSkillsFromResume(text).then(extracted => {
+        localStorage.setItem('userSkills', JSON.stringify(extracted.skills || []));
+        localStorage.setItem('userHardSkills', JSON.stringify(extracted.hard_skills || []));
+      }).catch(console.error);
+
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      setUploadError(err.message || 'Failed to process resume.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   async function handleTailorResume() {
     if (!resumeText) {
@@ -198,12 +253,24 @@ ${job.description || ''}`
         </h1>
         
         {!resumeText && (
-          <Alert className="mb-6 border-yellow-600/30 bg-yellow-900/10 text-yellow-500 rounded-xl">
-            <AlertDescription className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-              No resume profile found. Please upload your resume in the <Link href="/dashboard" className="underline font-bold">dashboard</Link> first.
-            </AlertDescription>
-          </Alert>
+          <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4 text-white">1. Upload Your Resume</h2>
+            <Card className="border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors">
+              <CardContent className="py-10 text-center">
+                <label className="cursor-pointer flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    {isUploading ? <Loader2 className="w-8 h-8 text-blue-400 animate-spin" /> : <Upload className="w-8 h-8 text-blue-400" />}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-lg">{isUploading ? 'Processing Resume...' : 'Click to Upload Resume'}</p>
+                    <p className="text-gray-400 text-sm mt-1">Upload your base resume to start tailoring</p>
+                  </div>
+                  <input type="file" className="hidden" onChange={handleUpload} accept=".pdf,.txt,.docx" disabled={isUploading} />
+                </label>
+                {uploadError && <p className="mt-4 text-red-400 text-sm">{uploadError}</p>}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <Card className="border-gray-800 bg-[#0D0D0D]">
@@ -294,12 +361,23 @@ ${job.description || ''}`
       </Card>
 
       {!resumeText && (
-        <Alert className="mb-6 border-yellow-600/30 bg-yellow-900/10 text-yellow-500 rounded-xl">
-          <AlertDescription className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-            No resume profile found. Please upload your resume in the <Link href="/dashboard" className="underline font-bold">dashboard</Link>.
-          </AlertDescription>
-        </Alert>
+        <div className="mb-8">
+          <Card className="border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors">
+            <CardContent className="py-12 text-center">
+              <label className="cursor-pointer flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  {isUploading ? <Loader2 className="w-8 h-8 text-blue-400 animate-spin" /> : <Upload className="w-8 h-8 text-blue-400" />}
+                </div>
+                <div>
+                  <p className="text-white font-bold text-lg">{isUploading ? 'Processing Resume...' : 'Upload Resume to Start Tailoring'}</p>
+                  <p className="text-gray-400 text-sm mt-1">We need your resume to know what to tailor.</p>
+                </div>
+                <input type="file" className="hidden" onChange={handleUpload} accept=".pdf,.txt,.docx" disabled={isUploading} />
+              </label>
+              {uploadError && <p className="mt-4 text-red-400 text-sm">{uploadError}</p>}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {!tailoredResume && (
