@@ -15,6 +15,7 @@ export interface CommunityJob {
   status?: string
   created_at?: string
   expires_at?: string
+  user_id?: string
 }
 
 export async function insertCommunityJob(jobData: CommunityJob) {
@@ -39,7 +40,8 @@ export async function insertCommunityJob(jobData: CommunityJob) {
         apply_link: jobData.apply_link || null,
         duration: jobData.duration || null,
         expires_at: expiresAt.toISOString(),
-        status: 'active'
+        status: 'active',
+        user_id: jobData.user_id || null
       }
     ])
     .select()
@@ -99,4 +101,42 @@ export async function searchCommunityJobs(query: string, location?: string): Pro
   }
 
   return data || []
+}
+export async function getUserCommunityJobs(userId: string): Promise<CommunityJob[]> {
+  const supabase = createAdminClient()
+  
+  const { data, error } = await supabase
+    .from('community_jobs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching user community jobs:', error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function deleteCommunityJob(jobId: string, userId?: string) {
+  const supabase = createAdminClient()
+  
+  let query = supabase
+    .from('community_jobs')
+    .update({ status: 'deleted' })
+    .eq('id', jobId)
+
+  if (userId) {
+    query = query.eq('user_id', userId)
+  }
+
+  const { data, error } = await query.select()
+
+  if (error) {
+    console.error('Error deleting community job:', error)
+    throw new Error(error.message)
+  }
+
+  return data
 }

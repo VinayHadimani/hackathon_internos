@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       contact_email: body.contact_email.trim(),
       apply_link: body.apply_link?.trim() || null,
       duration: body.duration?.trim() || null,
+      user_id: body.userId || null
     };
 
     const newJob = await insertCommunityJob(jobData);
