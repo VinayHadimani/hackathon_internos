@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async () => {
     // In "Open" mode, we just set the guest user immediately
     setUser(GUEST_USER);
-    window.location.href = '/dashboard';
+    window.location.href = '/selection';
   };
 
   const signOut = async () => {

@@ -107,7 +107,7 @@ export default function LandingPage() {
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
-      router.push('/dashboard')
+      router.push('/selection')
     } else {
       setIsLoginModalOpen(true)
     }

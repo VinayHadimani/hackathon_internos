@@ -38,7 +38,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               onClick={signIn} 
               className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-4 px-4 rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(37,99,235,0.2)] hover:shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-[0.98]"
             >
-              Enter Dashboard
+              Get Started
             </button>
             
             <p className="mt-8 text-center text-xs text-gray-500 max-w-[280px] mx-auto">Accessing as guest. No account data will be permanently saved.</p>
